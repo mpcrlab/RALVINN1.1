@@ -29,7 +29,6 @@ import cStringIO
 import numpy as np
 from scipy.misc import imresize
 from scipy import ndimage as ndi
-from af import *
 
 from rover import Rover20
 
