@@ -20,6 +20,8 @@
 
 from roverShell import *
 from RoverImageProcessing import RoverImageProcessor
+from RoverLearning import RoverLearner
+from ValueFunction import valueFunction
 import numpy as np
 import scipy.io as sio
 import cv2
@@ -45,6 +47,14 @@ class roverBrain():
         self.imageRect = (0, 0, 320, 240)
         self.displayCaption = "Machine Perception and Cognitive Robotics RALVINN"
 
+        self.state = [0, 0]
+        self.prev_state = []
+        self.treads = {
+            "left": [-0.5,0.5],
+            "right": [0.5,-0.5],
+        }
+        self.actions = ["left", "right"]
+
         self.imgProc = RoverImageProcessor()
 
         pygame.display.set_caption(self.displayCaption)
@@ -53,11 +63,14 @@ class roverBrain():
 
         self.screen = pygame.display.set_mode(self.windowSize)
         self.clock = pygame.time.Clock()
+        
+        self.learner = RoverLearner(2, 2, self.state)
         self.run()
 
     def run(self):
         sleep(1.5)
         while not self.quit:
+            self.takeAction()
             self.parseControls()
             self.refreshVideo()
         self.rover.quit = True
@@ -82,8 +95,13 @@ class roverBrain():
         image = cvimage_to_pygame(cv_image)
 
         #cv_image is an opencv image array that can be used for image processing. it will not be displayed.
-        res = self.imgProc.process(cv_image, ["pink", "orange"])
-        print res
+        self.prev_state = self.state
+        self.state = self.imgProc.process(cv_image, ["pink", "orange"])
+        if not cmp(self.state, self.prev_state) == 0:
+            print "state change!"
+            reward, terminal = valueFunction(self.state)
+            self.learner.setState(self.state, reward, terminal)
+        print self.state
 
         imagearray = pygame.surfarray.array3d(image)
         imagearray = imresize(imagearray, (32, 24))
@@ -194,3 +212,6 @@ class roverBrain():
             self.takepicure()
         else:
             pass
+
+    def takeAction(self):
+        self.rover.treads = self.treads[self.actions[self.learner.action]]
